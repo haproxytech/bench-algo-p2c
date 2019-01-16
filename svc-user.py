@@ -4,6 +4,9 @@
 Simple and functional REST server for Python (3.5) using no dependencies beyond the Python standard library.
 Returns the attributes of the requested user on /UserAttr.
 
+Takes 1 arg :
+  argv[1] : listening [address:]port
+
 Loosely inspired by this one by Ivan Averin :
    https://gist.github.com/iaverin/f81720df9ed37a49ecee6341e4d5c0c6
 '''
@@ -85,9 +88,17 @@ class RESTRequestHandler(http.server.BaseHTTPRequestHandler):
 
 def rest_server(port):
     'Starts the REST server'
-    http_server = http.server.HTTPServer(('', port), RESTRequestHandler)
+    port = port.split(':')
+    if len(port) > 1:
+        addr = port[0]
+        port = int(port[1])
+    else:
+        addr = ''
+        port = int(port[0])
+
+    http_server = http.server.HTTPServer((addr, port), RESTRequestHandler)
     http_server.service_actions = service_worker
-    print('Starting HTTP server at port %d' % port)
+    print('Starting HTTP server at port %s:%d' % (addr,port))
     try:
         http_server.serve_forever(poll_interval)
     except KeyboardInterrupt:
@@ -97,7 +108,7 @@ def rest_server(port):
 
 
 def main(argv):
-    rest_server(int(argv[0]) if argv else 2002)
+    rest_server(argv[0] if argv else '2002')
 
 if __name__ == '__main__':
     main(sys.argv[1:])

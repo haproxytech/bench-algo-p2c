@@ -8,7 +8,7 @@ Logs the access using the Log service.
 Receives the request using GET /MyTime/<user>.
 
 Takes 4 args :
-  argv[1] : listening port
+  argv[1] : listening [address:]port
   argv[2] : time service url[#key]
   argv[3] : user service url[#key]
   argv[4] : log service url[#key]
@@ -162,9 +162,17 @@ class RESTRequestHandler(http.server.BaseHTTPRequestHandler):
 
 def rest_server(port):
     'Starts the REST server'
-    http_server = http.server.HTTPServer(('', port), RESTRequestHandler)
+    port = port.split(':')
+    if len(port) > 1:
+        addr = port[0]
+        port = int(port[1])
+    else:
+        addr = ''
+        port = int(port[0])
+
+    http_server = http.server.HTTPServer((addr, port), RESTRequestHandler)
     http_server.service_actions = service_worker
-    print('Starting HTTP server at port %d' % port)
+    print('Starting HTTP server at port %s:%d' % (addr,port))
     try:
         http_server.serve_forever(poll_interval)
     except KeyboardInterrupt:
@@ -196,7 +204,7 @@ def main(argv):
         log_key = log_url[1]
     log_url = log_url[0]
 
-    rest_server(int(argv[0]) if argv else 2004)
+    rest_server(argv[0] if argv else '2004')
 
 if __name__ == '__main__':
     main(sys.argv[1:])
