@@ -9,8 +9,8 @@ UserAttr(). The info is passed using PUT and JSON :
 
 Takes 3 args :
   argv[1] : listening port
-  argv[2] : time service url
-  argv[3] : user service url
+  argv[2] : time service url[#key]
+  argv[3] : user service url[#key]
 
 Loosely inspired by this one by Ivan Averin :
    https://gist.github.com/iaverin/f81720df9ed37a49ecee6341e4d5c0c6
@@ -26,7 +26,10 @@ import urllib.request
 import urllib.parse 
 
 time_url = ''
+time_key = ''
+
 user_url = ''
+user_key = ''
 
 def service_worker():
     pass
@@ -34,19 +37,21 @@ def service_worker():
 poll_interval = 0.1
 
 
-def rest_call_json(url, payload=None, with_payload_method='PUT'):
+def rest_call_json(url, key, payload=None, with_payload_method='PUT'):
     'REST call with JSON decoding of the response and JSON payloads'
-
     try:
         if payload:
             if not isinstance(payload, str):
                 payload = json.dumps(payload)
             # PUT or POST
-            response = urllib.request.urlopen(
-                MethodRequest(url, payload.encode(), {'Content-Type': 'application/json'}, method=with_payload_method))
+            request = MethodRequest(url, payload.encode(), {'Content-Type': 'application/json'}, method=with_payload_method)
         else:
             # GET
-            response = urllib.request.urlopen(url)
+            request = urllib.request.Request(url)
+
+        if key:
+            request.add_header('X-Api-Key', key)
+        response = urllib.request.urlopen(request)
         response = response.read().decode()
         if response:
             response = json.loads(response)
@@ -130,14 +135,14 @@ class RESTRequestHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write('Missing client address ("addr")\n'.encode())
                 return
 
-            attr = rest_call_json(user_url + '/' + str(user))
+            attr = rest_call_json(user_url + '/' + str(user), user_key)
             if not attr:
                 self.send_response(404)
                 self.end_headers()
                 self.wfile.write('No such user\n'.encode())
                 return
 
-            time = rest_call_json(time_url)
+            time = rest_call_json(time_url, time_key)
             if not time:
                 self.send_response(500)
                 self.end_headers()
@@ -173,9 +178,20 @@ def rest_server(port):
 
 def main(argv):
     global time_url
+    global time_key
     global user_url
-    time_url = argv[1]
-    user_url = argv[2]
+    global user_key
+
+    time_url = argv[1].split('#')
+    if len(time_url) > 1:
+        time_key = time_url[1]
+    time_url = time_url[0]
+
+    user_url = argv[2].split('#')
+    if len(user_url) > 1:
+        user_key = user_url[1]
+    user_url = user_url[0]
+
     rest_server(int(argv[0]) if argv else 2003)
 
 if __name__ == '__main__':
