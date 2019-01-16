@@ -1,14 +1,14 @@
 #!/bin/bash
 
 usage() {
-        echo "Usage: ${1##*/} <config> [start|stop|status]"
+        echo "Usage: ${1##*/} <config> [start|stop|status]..."
         exit 1
 }
 
 [ $# -ge 2 ] || usage "$0"
 
-config="$1"
-action="$2"
+config="$1"; shift
+actions="$@"
 
 if [ ! -r "$config" ]; then
         echo "Config file $config not readable."
@@ -22,14 +22,15 @@ if [ -z "$SIDECAR_PID" ]; then
         exit 1
 fi
 
-case "$action" in
+fail=0
+for action in ${actions[@]}; do
+    case "$action" in
         status)
                 if [ -s "$SIDECAR_PID" ]; then
                         echo "Running as pid $(cat "$SIDECAR_PID")"
-                        exit 0
                 else
                         echo "Not running"
-                        exit 1
+                        fail=1
                 fi
                 ;;
         stop)
@@ -40,17 +41,18 @@ case "$action" in
                 else
                         echo "Already stopped"
                 fi
-                exit 0
                 ;;
         start)
                 if [ -s "$SIDECAR_PID" ]; then
                         echo "Still running as pid $(cat "$SIDECAR_PID")"
-                        exit 0
+                else
+                        "$HAPROXY" -D -f sidecar.cfg -p "$SIDECAR_PID"
+                        [ $? = 0 ] || fail=1
                 fi
-
-                "$HAPROXY" -D -f sidecar.cfg -p "$SIDECAR_PID"
                 ;;
         *)
                 usage "$0"
                 ;;
-esac
+    esac
+done
+exit $fail

@@ -1,14 +1,14 @@
 #!/bin/bash
 
 usage() {
-        echo "Usage: ${1##*/} <config> [start|stop|status]"
+        echo "Usage: ${1##*/} <config> [start|stop|status]..."
         exit 1
 }
 
 [ $# -ge 2 ] || usage "$0"
 
-config="$1"
-action="$2"
+config="$1"; shift
+actions="$@"
 
 if [ ! -r "$config" ]; then
         echo "Config file $config not readable."
@@ -22,14 +22,15 @@ if [ -z "$SERVICE_PID" ]; then
         exit 1
 fi
 
-case "$action" in
+fail=0
+for action in ${actions[@]}; do
+    case "$action" in
         status)
                 if [ -s "$SERVICE_PID" ]; then
                         echo "Running as pid $(cat "$SERVICE_PID")"
-                        exit 0
                 else
                         echo "Not running"
-                        exit 1
+                        fail=1
                 fi
                 ;;
         stop)
@@ -40,25 +41,25 @@ case "$action" in
                 else
                         echo "Already stopped"
                 fi
-                exit 0
                 ;;
         start)
                 if [ -s "$SERVICE_PID" ]; then
                         echo "Still running as pid $(cat "$SERVICE_PID")"
-                        exit 0
+                else
+                        "$PYTHON" "$SOURCE" "$SERVICE:1$PORT" "$TIME_URL" "$USER_URL" "$LOG_URL" </dev/null >/dev/null 2>&1 &
+                        ret=$?
+                        if [ $ret != 0 ]; then
+                                echo "Service failed to start."
+                                fail=1
+                        else
+                                echo $! > "$SERVICE_PID"
+                                disown
+                        fi
                 fi
-
-                "$PYTHON" "$SOURCE" "$SERVICE:1$PORT" "$TIME_URL" "$USER_URL" "$LOG_URL" </dev/null >/dev/null 2>&1 &
-                ret=$?
-                if [ $ret != 0 ]; then
-                        echo "Service failed to start."
-                        exit $ret
-                fi
-
-                echo $! > "$SERVICE_PID"
-                disown
                 ;;
         *)
                 usage "$0"
                 ;;
-esac
+    esac
+done
+exit $fail
