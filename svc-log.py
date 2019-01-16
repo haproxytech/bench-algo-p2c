@@ -24,6 +24,7 @@ import shutil
 import sys
 import urllib.request
 import urllib.parse 
+import syslog
 
 time_url = ''
 time_key = ''
@@ -149,11 +150,12 @@ class RESTRequestHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write('Failed to access time service\n'.encode())
                 return
 
+            syslog.syslog('time=' + str(time['hour']) + ':' + str(time['minute']) +
+                          ' addr=' + str(addr) + ' meth=' + str(meth) +
+                          ' user=' + str(user) + ' name="' + str(attr['name']) +
+                          '" offset=' + str(attr['offset']))
+
             self.send_response(200)
-            print('time=' + str(time['hour']) + ':' + str(time['minute']) +
-                  ' addr=' + str(addr) + ' meth=' + str(meth) +
-                  ' user=' + str(user) + ' name="' + str(attr['name']) +
-                  '" offset=' + str(attr['offset']))
             self.send_header('Content-type', 'application/json')
             self.end_headers()
         else:
