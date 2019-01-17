@@ -25,6 +25,8 @@ import shutil
 import sys
 import urllib.request
 import urllib.parse 
+import threading
+import socketserver
 
 time_url = ''
 time_key = ''
@@ -159,6 +161,8 @@ class RESTRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(method + ' is not supported\n'.encode())
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
 
 def rest_server(port):
     'Starts the REST server'
@@ -170,13 +174,20 @@ def rest_server(port):
         addr = ''
         port = int(port[0])
 
-    http_server = http.server.HTTPServer((addr, port), RESTRequestHandler)
-    http_server.service_actions = service_worker
-    print('Starting HTTP server at port %s:%d' % (addr,port))
-    try:
-        http_server.serve_forever(poll_interval)
-    except KeyboardInterrupt:
-        pass
+    #http_server = http.server.HTTPServer((addr, port), RESTRequestHandler)
+    #http_server.service_actions = service_worker
+    #try:
+    #    http_server.serve_forever(poll_interval)
+    #except KeyboardInterrupt:
+    #    pass
+
+    http_server = ThreadedTCPServer((addr, port), RESTRequestHandler)
+    http_server.allow_reuse_address = True
+    server_thread = threading.Thread(target=http_server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+    server_thread.join()
+
     print('Stopping HTTP server')
     http_server.server_close()
 
