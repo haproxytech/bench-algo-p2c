@@ -22,6 +22,9 @@ if [ -z "$SERVICE_PID" ]; then
         exit 1
 fi
 
+START=""
+[ -z "$CPUS" ] || START="taskset -c $CPUS"
+
 fail=0
 for action in ${actions[@]}; do
     case "$action" in
@@ -46,7 +49,7 @@ for action in ${actions[@]}; do
                 if [ -s "$SERVICE_PID" ]; then
                         echo "Still running as pid $(cat "$SERVICE_PID")"
                 else
-                        "$PYTHON" "$SOURCE" "$SERVICE:1$PORT" "$TIME_URL" "$USER_URL" "$LOG_URL" </dev/null >/dev/null 2>&1 &
+                        $START "$PYTHON" "$SOURCE" "$SERVICE:1$PORT" "$TIME_URL" "$USER_URL" "$LOG_URL" </dev/null >/dev/null 2>&1 &
                         ret=$?
                         if [ $ret != 0 ]; then
                                 echo "Service failed to start."

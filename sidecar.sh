@@ -22,6 +22,9 @@ if [ -z "$SIDECAR_PID" ]; then
         exit 1
 fi
 
+START=""
+[ -z "$CPUS" ] || START="taskset -c $CPUS"
+
 fail=0
 for action in ${actions[@]}; do
     case "$action" in
@@ -46,7 +49,7 @@ for action in ${actions[@]}; do
                 if [ -s "$SIDECAR_PID" ]; then
                         echo "Still running as pid $(cat "$SIDECAR_PID")"
                 else
-                        "$HAPROXY" -D -f sidecar.cfg -p "$SIDECAR_PID"
+                        $START "$HAPROXY" -D -f sidecar.cfg -p "$SIDECAR_PID"
                         [ $? = 0 ] || fail=1
                 fi
                 ;;
