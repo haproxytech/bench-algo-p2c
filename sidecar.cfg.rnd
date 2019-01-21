@@ -23,10 +23,7 @@ defaults
 	monitor-uri /health
 	option httpchk /health
 	#default-server check inter 1s
-	balance leastconn
-	#balance roundrobin
-	#balance random(1)
-	#balance random
+	balance random(1)
 	#option prefer-last-server
 	#http-reuse always
 	option dontlog-normal
